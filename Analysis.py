@@ -290,7 +290,7 @@ def plot_importance(model, features, num=len(X)):
 
 plot_importance(catboost_model, X)
 ##############################################################################################
-# Model Improvement and Feature Extraction S
+# Model Improvement and Feature Extraction
 ##############################################################################################
 df.head()
 cat_summary(df,"Cabin",plot=True)
@@ -842,6 +842,7 @@ plot_bar_importance2(lgbm_model, X_train, orientation='horizontal')
 
 
 ###############################Final##############################################
+
 # 2. Eğitim ve hedef değişkenlerini ayıralım
 y = dff["Survived"]  # Hedef değişken (Survived)
 X = dff.drop(["Survived"], axis=1)  # Eğitim verisinin geri kalan özellikler
@@ -859,7 +860,27 @@ rf_model = RandomForestClassifier(random_state=17).fit(X_train_common, y)
 # 6. Test verisi üzerinde tahmin yapalım
 y_pred_test = rf_model.predict(dff_t_common)
 
-# 7. Tahmin sonuçlarını kaydedelim
+# 7. Hyperparameter Optimization
+from sklearn.model_selection import GridSearchCV, cross_validate
+rf_model = RandomForestClassifier(random_state=17)
+
+rf_params = {"max_depth": [8, 10, None],
+             "max_features": [10, 15, 20],
+             "min_samples_split": [2,10],
+             "n_estimators": [100]}
+
+rf_best_grid = GridSearchCV(rf_model, rf_params, cv=5, n_jobs=-1, verbose=True).fit(X, y)
+rf_best_grid.best_params_
+rf_final = rf_model.set_params(**rf_best_grid.best_params_, random_state=17).fit(X, y)
+y_pred = rf_final.predict(X_test)
+print(f"Accuracy: {round(accuracy_score(y_pred, y_test), 2)}")
+print(f"Recall: {round(recall_score(y_pred,y_test),2)}")
+print(f"Precision: {round(precision_score(y_pred,y_test), 2)}")
+print(f"F1: {round(f1_score(y_pred,y_test), 2)}")
+#print(f"Auc: {round(roc_auc_score(y_pred,y_test), 2)}")
+print(classification_report(y_pred, y_test))
+
+# 8. Tahmin sonuçlarını kaydedelim
 submission = pd.DataFrame({
     "PassengerId": dff_t.index,  # Test verisindeki PassengerId'yi ekliyoruz
     "Survived": y_pred_test  # Tahmin edilen Survived değerini ekliyoruz
